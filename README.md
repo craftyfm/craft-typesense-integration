@@ -21,14 +21,14 @@ Index Craft elements into [Typesense](https://typesense.org) using the official
 ## Installation
 
 ```bash
-composer require craftyfm/craft-typesense-integration
+composer require craftyfm/typesense-integration
 php craft plugin/install typesense-integration
 ```
 
 ## Configuration
 
 Settings can be edited in **Typesense → Settings** (admins only, when `allowAdminChanges` is on), but the
-recommended setup is a config file. Copy `vendor/craftyfm/craft-typesense-integration/src/config.php`
+recommended setup is a config file. Copy `vendor/craftyfm/typesense-integration/src/config.php`
 to `config/typesense-integration.php`. Anything set there overrides the control panel.
 
 ```php

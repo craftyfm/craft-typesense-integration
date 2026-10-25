@@ -1,5 +1,5 @@
 {
-  "name": "craftyfm/craft-typesense-integration",
+  "name": "craftyfm/typesense-integration",
   "description": "Index Craft CMS elements into Typesense, with multi-source collections, transformers and automatic syncing.",
   "type": "craft-plugin",
   "keywords": [
