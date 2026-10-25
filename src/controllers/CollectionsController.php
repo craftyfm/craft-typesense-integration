@@ -1,11 +1,11 @@
 <?php
 
-namespace x2network\typesenseintegration\controllers;
+namespace craftyfm\typesenseintegration\controllers;
 
-use x2network\typesenseintegration\jobs\IndexCollection;
-use x2network\typesenseintegration\models\CollectionConfig;
-use x2network\typesenseintegration\models\SourceConfig;
-use x2network\typesenseintegration\TypesenseIntegration;
+use craftyfm\typesenseintegration\jobs\IndexCollection;
+use craftyfm\typesenseintegration\models\CollectionConfig;
+use craftyfm\typesenseintegration\models\SourceConfig;
+use craftyfm\typesenseintegration\TypesenseIntegration;
 use Craft;
 use craft\helpers\Queue;
 use craft\helpers\UrlHelper;

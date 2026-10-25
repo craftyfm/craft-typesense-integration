@@ -1,6 +1,6 @@
 <?php
 
-namespace x2network\typesenseintegration\models;
+namespace craftyfm\typesenseintegration\models;
 
 use craft\base\ElementInterface;
 use yii\base\InvalidConfigException;

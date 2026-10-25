@@ -1,8 +1,8 @@
 <?php
 
-namespace x2network\typesenseintegration\controllers;
+namespace craftyfm\typesenseintegration\controllers;
 
-use x2network\typesenseintegration\TypesenseIntegration;
+use craftyfm\typesenseintegration\TypesenseIntegration;
 use Craft;
 use craft\web\Controller;
 use yii\web\Response;

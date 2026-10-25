@@ -1,5 +1,5 @@
 {
-  "name": "x2network/craft-typesense-integration",
+  "name": "craftyfm/craft-typesense-integration",
   "description": "Index Craft CMS elements into Typesense, with multi-source collections, transformers and automatic syncing.",
   "type": "craft-plugin",
   "keywords": [
@@ -13,7 +13,7 @@
   "license": "MIT",
   "authors": [
     {
-      "name": "X2 Network"
+      "name": "craftyfm"
     }
   ],
   "require": {
@@ -23,14 +23,14 @@
   },
   "autoload": {
     "psr-4": {
-      "x2network\\typesenseintegration\\": "src/"
+      "craftyfm\\typesenseintegration\\": "src/"
     }
   },
   "extra": {
     "handle": "typesense-integration",
     "name": "Typesense Integration",
-    "developer": "X2 Network",
-    "class": "x2network\\typesenseintegration\\TypesenseIntegration"
+    "developer": "craftyfm",
+    "class": "craftyfm\\typesenseintegration\\TypesenseIntegration"
   },
   "config": {
     "sort-packages": true,

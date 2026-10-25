@@ -1,9 +1,9 @@
 <?php
 
-namespace x2network\typesenseintegration\console\controllers;
+namespace craftyfm\typesenseintegration\console\controllers;
 
-use x2network\typesenseintegration\jobs\IndexCollection;
-use x2network\typesenseintegration\TypesenseIntegration;
+use craftyfm\typesenseintegration\jobs\IndexCollection;
+use craftyfm\typesenseintegration\TypesenseIntegration;
 use craft\console\Controller;
 use craft\helpers\Console;
 use craft\helpers\Queue;

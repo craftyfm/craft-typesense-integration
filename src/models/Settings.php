@@ -1,8 +1,8 @@
 <?php
 
-namespace x2network\typesenseintegration\models;
+namespace craftyfm\typesenseintegration\models;
 
-use x2network\typesenseintegration\helpers\Log;
+use craftyfm\typesenseintegration\helpers\Log;
 use craft\base\Model;
 use craft\helpers\App;
 

@@ -1,15 +1,15 @@
 <?php
 
-namespace x2network\typesenseintegration;
+namespace craftyfm\typesenseintegration;
 
-use x2network\typesenseintegration\controllers\CollectionsController;
-use x2network\typesenseintegration\helpers\Log;
-use x2network\typesenseintegration\models\Settings;
-use x2network\typesenseintegration\services\Client;
-use x2network\typesenseintegration\services\Collections;
-use x2network\typesenseintegration\services\Indexer;
-use x2network\typesenseintegration\services\ScopedKeys;
-use x2network\typesenseintegration\variables\TypesenseVariable;
+use craftyfm\typesenseintegration\controllers\CollectionsController;
+use craftyfm\typesenseintegration\helpers\Log;
+use craftyfm\typesenseintegration\models\Settings;
+use craftyfm\typesenseintegration\services\Client;
+use craftyfm\typesenseintegration\services\Collections;
+use craftyfm\typesenseintegration\services\Indexer;
+use craftyfm\typesenseintegration\services\ScopedKeys;
+use craftyfm\typesenseintegration\variables\TypesenseVariable;
 use Craft;
 use craft\base\Model;
 use craft\base\Plugin;
@@ -176,6 +176,7 @@ class TypesenseIntegration extends Plugin
 
         $handler = function(ElementEvent $event) {
             $this->indexer->queueSync($event->element);
+            $this->indexer->queueRelatedSync($event->element);
         };
 
         Event::on(Elements::class, Elements::EVENT_AFTER_SAVE_ELEMENT, $handler);

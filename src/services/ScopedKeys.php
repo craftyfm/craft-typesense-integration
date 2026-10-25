@@ -1,10 +1,10 @@
 <?php
 
-namespace x2network\typesenseintegration\services;
+namespace craftyfm\typesenseintegration\services;
 
-use x2network\typesenseintegration\helpers\Log;
-use x2network\typesenseintegration\models\CollectionConfig;
-use x2network\typesenseintegration\TypesenseIntegration;
+use craftyfm\typesenseintegration\helpers\Log;
+use craftyfm\typesenseintegration\models\CollectionConfig;
+use craftyfm\typesenseintegration\TypesenseIntegration;
 use Throwable;
 use yii\base\Component;
 

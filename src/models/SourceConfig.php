@@ -1,10 +1,10 @@
 <?php
 
-namespace x2network\typesenseintegration\models;
+namespace craftyfm\typesenseintegration\models;
 
-use x2network\typesenseintegration\transformers\CallbackTransformer;
-use x2network\typesenseintegration\transformers\FieldMapTransformer;
-use x2network\typesenseintegration\transformers\TransformerInterface;
+use craftyfm\typesenseintegration\transformers\CallbackTransformer;
+use craftyfm\typesenseintegration\transformers\FieldMapTransformer;
+use craftyfm\typesenseintegration\transformers\TransformerInterface;
 use Closure;
 use Craft;
 use craft\base\ElementInterface;
@@ -20,6 +20,9 @@ class SourceConfig
 
     /** @var class-string<ElementInterface> */
     public readonly string $elementType;
+
+    /** @var RelatedTrigger[] */
+    public readonly array $relatedTriggers;
 
     private array|Closure $criteria;
     private mixed $transformerConfig;
@@ -41,6 +44,10 @@ class SourceConfig
         $this->elementType = $elementType;
         $this->criteria = $config['criteria'] ?? [];
         $this->transformerConfig = $config['transformer'];
+        $this->relatedTriggers = array_map(
+            fn(array $triggerConfig) => new RelatedTrigger($triggerConfig),
+            $config['relatedTriggers'] ?? [],
+        );
     }
 
     /**
@@ -104,6 +111,20 @@ class SourceConfig
     public function supports(string $elementType): bool
     {
         return is_a($elementType, $this->elementType, true);
+    }
+
+    /**
+     * This source's relatedTriggers whose `elementType` matches $element's class - a cheap
+     * filter before a caller runs the more expensive matches() on each.
+     *
+     * @return RelatedTrigger[]
+     */
+    public function getTriggersFor(ElementInterface $element): array
+    {
+        return array_values(array_filter(
+            $this->relatedTriggers,
+            fn(RelatedTrigger $trigger) => $trigger->appliesTo($element::class),
+        ));
     }
 
     public function getTransformer(): TransformerInterface

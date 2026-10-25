@@ -1,14 +1,16 @@
 <?php
 
-namespace x2network\typesenseintegration\services;
+namespace craftyfm\typesenseintegration\services;
 
-use x2network\typesenseintegration\events\DocumentEvent;
-use x2network\typesenseintegration\helpers\DocumentHelper;
-use x2network\typesenseintegration\helpers\Log;
-use x2network\typesenseintegration\jobs\SyncElement;
-use x2network\typesenseintegration\models\CollectionConfig;
-use x2network\typesenseintegration\models\SourceConfig;
-use x2network\typesenseintegration\TypesenseIntegration;
+use craftyfm\typesenseintegration\events\DocumentEvent;
+use craftyfm\typesenseintegration\helpers\DocumentHelper;
+use craftyfm\typesenseintegration\helpers\Log;
+use craftyfm\typesenseintegration\jobs\SyncElement;
+use craftyfm\typesenseintegration\jobs\SyncRelated;
+use craftyfm\typesenseintegration\models\CollectionConfig;
+use craftyfm\typesenseintegration\models\RelatedTrigger;
+use craftyfm\typesenseintegration\models\SourceConfig;
+use craftyfm\typesenseintegration\TypesenseIntegration;
 use Craft;
 use craft\base\ElementInterface;
 use craft\helpers\Db;
@@ -164,6 +166,106 @@ class Indexer extends Component
             Log::error("Could not sync element {$element->id}: {$e->getMessage()}");
             Craft::$app->getErrorHandler()->logException($e);
         }
+    }
+
+    /**
+     * Schedules a resync of every source element currently related to $element, for every
+     * relatedTrigger it matches (e.g. a Category being renamed resyncs the products that list
+     * it). One hop only: this re-transforms and re-imports the related elements, but never
+     * saves them, so it can never cascade back into this same handler.
+     */
+    public function queueRelatedSync(ElementInterface $element): void
+    {
+        if (
+            !$element->id ||
+            $element->propagating ||
+            ElementHelper::isDraftOrRevision($element)
+        ) {
+            return;
+        }
+
+        try {
+            $collections = TypesenseIntegration::getInstance()->collections;
+
+            if (!$collections->hasRelatedTriggerFor($element::class)) {
+                return;
+            }
+
+            foreach ($collections->getAllCollections() as $collection) {
+                foreach ($collection->sources as $source) {
+                    foreach ($source->getTriggersFor($element) as $trigger) {
+                        if (!$trigger->matches($element)) {
+                            continue;
+                        }
+
+                        if (TypesenseIntegration::getInstance()->getSettings()->useQueue) {
+                            Queue::push(new SyncRelated([
+                                'collection' => $collection->handle,
+                                'source' => $source->handle,
+                                'triggerElementType' => $element::class,
+                                'triggerElementId' => $element->id,
+                                'triggerSiteId' => $element->siteId,
+                                'field' => $trigger->field,
+                            ]));
+                        } else {
+                            $this->syncRelated($collection, $source, $trigger, $element);
+                        }
+                    }
+                }
+            }
+        } catch (Throwable $e) {
+            Log::error("Could not queue related sync for element {$element->id}: {$e->getMessage()}");
+            Craft::$app->getErrorHandler()->logException($e);
+        }
+    }
+
+    /**
+     * Resyncs every element of $source currently related to $triggerElement via $trigger,
+     * batched like indexCollection() so a trigger with many related elements (e.g. a popular
+     * category) doesn't load them all into memory at once.
+     *
+     * Deliberately has no equivalent of syncElement()'s stale-document cleanup: it only
+     * republishes elements that are currently related. An element that stops being related
+     * (unlinked from the trigger) is handled by its own direct save, which already re-transforms
+     * it through the normal queueSync() path.
+     */
+    public function syncRelated(CollectionConfig $collection, SourceConfig $source, RelatedTrigger $trigger, ElementInterface $triggerElement): void
+    {
+        $plugin = TypesenseIntegration::getInstance();
+        $batchSize = $plugin->getSettings()->batchSize;
+        $query = $trigger->buildRelatedQuery($source, $triggerElement);
+
+        $indexed = 0;
+        $failed = 0;
+
+        foreach (Db::batch($query, $batchSize) as $elements) {
+            $documents = [];
+
+            foreach ($elements as $element) {
+                $document = $this->buildDocument($collection, $source, $element);
+                if ($document !== null) {
+                    $documents[] = $document;
+                }
+            }
+
+            if ($documents) {
+                $plugin->collections->ensure($collection);
+                [$batchIndexed, $batchFailed] = $this->import($collection, $documents);
+                $indexed += $batchIndexed;
+                $failed += $batchFailed;
+            }
+        }
+
+        Log::debug(sprintf(
+            'Resynced %d element(s) in “%s” (%s) related to %s %d: %d indexed, %d failed.',
+            $indexed + $failed,
+            $collection->name,
+            $source->handle,
+            $triggerElement::class,
+            $triggerElement->id,
+            $indexed,
+            $failed,
+        ));
     }
 
     /**

@@ -1,8 +1,8 @@
 <?php
 
-namespace x2network\typesenseintegration\helpers;
+namespace craftyfm\typesenseintegration\helpers;
 
-use x2network\typesenseintegration\TypesenseIntegration;
+use craftyfm\typesenseintegration\TypesenseIntegration;
 use Craft;
 use Psr\Log\LogLevel;
 use yii\log\Logger;

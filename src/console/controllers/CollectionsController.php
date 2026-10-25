@@ -1,9 +1,9 @@
 <?php
 
-namespace x2network\typesenseintegration\console\controllers;
+namespace craftyfm\typesenseintegration\console\controllers;
 
-use x2network\typesenseintegration\models\CollectionConfig;
-use x2network\typesenseintegration\TypesenseIntegration;
+use craftyfm\typesenseintegration\models\CollectionConfig;
+use craftyfm\typesenseintegration\TypesenseIntegration;
 use craft\console\Controller;
 use craft\helpers\Console;
 use Throwable;

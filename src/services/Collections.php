@@ -1,11 +1,11 @@
 <?php
 
-namespace x2network\typesenseintegration\services;
+namespace craftyfm\typesenseintegration\services;
 
-use x2network\typesenseintegration\helpers\Log;
-use x2network\typesenseintegration\models\CollectionConfig;
-use x2network\typesenseintegration\models\SourceConfig;
-use x2network\typesenseintegration\TypesenseIntegration;
+use craftyfm\typesenseintegration\helpers\Log;
+use craftyfm\typesenseintegration\models\CollectionConfig;
+use craftyfm\typesenseintegration\models\SourceConfig;
+use craftyfm\typesenseintegration\TypesenseIntegration;
 use craft\base\ElementInterface;
 use Typesense\Documents;
 use Typesense\Exceptions\ObjectNotFound;
@@ -64,6 +64,27 @@ class Collections extends Component
         foreach ($this->getAllCollections() as $collection) {
             if ($collection->getSourcesFor($elementType)) {
                 return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether any source's relatedTriggers could apply to elements of this type - a cheap,
+     * no-query gate run on every save/restore/delete before the costlier per-trigger matches().
+     *
+     * @param class-string<ElementInterface> $elementType
+     */
+    public function hasRelatedTriggerFor(string $elementType): bool
+    {
+        foreach ($this->getAllCollections() as $collection) {
+            foreach ($collection->sources as $source) {
+                foreach ($source->relatedTriggers as $trigger) {
+                    if ($trigger->appliesTo($elementType)) {
+                        return true;
+                    }
+                }
             }
         }
 

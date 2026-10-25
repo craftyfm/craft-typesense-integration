@@ -1,6 +1,6 @@
 <?php
 
-namespace x2network\typesenseintegration\helpers;
+namespace craftyfm\typesenseintegration\helpers;
 
 use craft\base\ElementInterface;
 use craft\elements\db\ElementQueryInterface;

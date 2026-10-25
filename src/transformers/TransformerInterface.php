@@ -1,6 +1,6 @@
 <?php
 
-namespace x2network\typesenseintegration\transformers;
+namespace craftyfm\typesenseintegration\transformers;
 
 use craft\base\ElementInterface;
 

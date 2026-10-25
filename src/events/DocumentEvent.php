@@ -1,9 +1,9 @@
 <?php
 
-namespace x2network\typesenseintegration\events;
+namespace craftyfm\typesenseintegration\events;
 
-use x2network\typesenseintegration\models\CollectionConfig;
-use x2network\typesenseintegration\models\SourceConfig;
+use craftyfm\typesenseintegration\models\CollectionConfig;
+use craftyfm\typesenseintegration\models\SourceConfig;
 use craft\base\ElementInterface;
 use craft\events\CancelableEvent;
 

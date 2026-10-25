@@ -1,9 +1,9 @@
 <?php
 
-namespace x2network\typesenseintegration\services;
+namespace craftyfm\typesenseintegration\services;
 
-use x2network\typesenseintegration\helpers\Log;
-use x2network\typesenseintegration\TypesenseIntegration;
+use craftyfm\typesenseintegration\helpers\Log;
+use craftyfm\typesenseintegration\TypesenseIntegration;
 use Craft;
 use Monolog\Logger;
 use Throwable;

@@ -21,14 +21,14 @@ Index Craft elements into [Typesense](https://typesense.org) using the official
 ## Installation
 
 ```bash
-composer require x2network/craft-typesense-integration
+composer require craftyfm/craft-typesense-integration
 php craft plugin/install typesense-integration
 ```
 
 ## Configuration
 
 Settings can be edited in **Typesense → Settings** (admins only, when `allowAdminChanges` is on), but the
-recommended setup is a config file. Copy `vendor/x2network/craft-typesense-integration/src/config.php`
+recommended setup is a config file. Copy `vendor/craftyfm/craft-typesense-integration/src/config.php`
 to `config/typesense-integration.php`. Anything set there overrides the control panel.
 
 ```php
@@ -172,7 +172,7 @@ option fields become their values, and `null` values are dropped. Return `null` 
 ```php
 namespace modules\search;
 
-use aodihis\typesenseintegration\transformers\TransformerInterface;
+use craftyfm\typesenseintegration\transformers\TransformerInterface;
 use craft\base\ElementInterface;
 
 class ProductTransformer implements TransformerInterface
@@ -191,8 +191,8 @@ class ProductTransformer implements TransformerInterface
 ### Modifying documents with an event
 
 ```php
-use aodihis\typesenseintegration\events\DocumentEvent;
-use aodihis\typesenseintegration\services\Indexer;
+use craftyfm\typesenseintegration\events\DocumentEvent;
+use craftyfm\typesenseintegration\services\Indexer;
 use yii\base\Event;
 
 Event::on(Indexer::class, Indexer::EVENT_BEFORE_INDEX_DOCUMENT, function(DocumentEvent $event) {
@@ -200,6 +200,56 @@ Event::on(Indexer::class, Indexer::EVENT_BEFORE_INDEX_DOCUMENT, function(Documen
     // $event->isValid = false; // skip this element
 });
 ```
+
+### Resyncing on a related element's change
+
+A document often denormalizes data from a *related* element - a category's title, an author's
+name. Saving the related element doesn't match any source's own `elementType`, so nothing resyncs
+it on its own. A source's `relatedTriggers` closes that gap: when an element matching a trigger is
+saved, restored or deleted, every element of that source currently related to it is resynced.
+
+```php
+'sources' => [
+    'site' => [
+        'elementType' => Entry::class,
+        'criteria' => ['section' => 'news'],
+        'transformer' => [/* ... */],
+
+        'relatedTriggers' => [
+            [
+                // When a Category in the "topics" group changes, resync every entry
+                // related to it through the "topics" field.
+                'elementType' => Category::class,
+                'criteria' => fn(CategoryQuery $query) => $query->group('topics'),
+                'field' => 'topics',
+            ],
+        ],
+    ],
+],
+```
+
+| Key | Description |
+| --- | --- |
+| `elementType` | The related element's class, e.g. `Category::class`. |
+| `criteria` | Optional. Element query params (array) or a closure that receives the query, narrowing which elements of `elementType` trigger a resync - e.g. one category group among several. |
+| `field` | Optional. The relation field handle to scope `relatedTo()` to. Omit it to match any field that relates the two. |
+
+This is one hop only: resyncing a related element re-transforms and re-imports it, but never saves
+it, so a trigger can't cascade into itself or another trigger.
+
+**Known limits:**
+
+- **Ancestors aren't walked.** If a transformer also denormalizes a related category's
+  *ancestors* (e.g. breadcrumb titles), renaming an ancestor that isn't itself directly related to
+  an element isn't covered - only elements directly related to the saved/deleted element are
+  resynced.
+- **No stale-document cleanup here.** A related resync only republishes elements currently
+  related to the trigger; it has no notion of "used to be related, now isn't." Unlinking a
+  relation is an edit to the element itself, which already resyncs it through the normal
+  save-triggered sync.
+- **A hard-deleted trigger element is a no-op.** If the related element is hard-deleted (not just
+  trashed) before a queued resync runs, it can no longer be found and the job does nothing - the
+  same gap a direct sync has for an element that's gone by the time its own job runs.
 
 ## Indexing
 

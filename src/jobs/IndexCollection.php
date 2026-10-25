@@ -1,8 +1,8 @@
 <?php
 
-namespace x2network\typesenseintegration\jobs;
+namespace craftyfm\typesenseintegration\jobs;
 
-use x2network\typesenseintegration\TypesenseIntegration;
+use craftyfm\typesenseintegration\TypesenseIntegration;
 use craft\queue\BaseJob;
 
 /**
