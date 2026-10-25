@@ -1,0 +1,185 @@
+{% import '_includes/forms.twig' as forms %}
+
+{% macro configWarning(setting, overrides) -%}
+    {% if setting in overrides %}
+        {{ 'This is being overridden by the `{setting}` setting in `config/typesense-integration.php`.'|t('typesense-integration', { setting: setting })|md(inlineOnly=true) }}
+    {% endif %}
+{%- endmacro %}
+
+{% from _self import configWarning %}
+
+<h2>{{ 'Connection'|t('typesense-integration') }}</h2>
+
+{% if 'nodes' in overrides %}
+    <p class="notice has-icon">
+        <span class="icon" aria-hidden="true"></span>
+        {{ 'A cluster `nodes` list is set in `config/typesense-integration.php`; the host, port, protocol and path below are ignored.'|t('typesense-integration')|md(inlineOnly=true) }}
+    </p>
+{% endif %}
+
+{{ forms.autosuggestField({
+    label: 'Host'|t('typesense-integration'),
+    instructions: 'The Typesense host, e.g. `localhost` or `xyz.a1.typesense.net`.'|t('typesense-integration'),
+    id: 'host',
+    name: 'host',
+    value: settings.host,
+    suggestEnvVars: true,
+    required: true,
+    errors: settings.getErrors('host'),
+    warning: configWarning('host', overrides),
+}) }}
+
+{{ forms.autosuggestField({
+    label: 'Port'|t('typesense-integration'),
+    instructions: 'Usually `8108` for self-hosted, `443` for Typesense Cloud.'|t('typesense-integration'),
+    id: 'port',
+    name: 'port',
+    value: settings.port,
+    suggestEnvVars: true,
+    required: true,
+    errors: settings.getErrors('port'),
+    warning: configWarning('port', overrides),
+}) }}
+
+{{ forms.autosuggestField({
+    label: 'Protocol'|t('typesense-integration'),
+    instructions: '`http` or `https`.'|t('typesense-integration'),
+    id: 'protocol',
+    name: 'protocol',
+    value: settings.protocol,
+    suggestEnvVars: true,
+    required: true,
+    errors: settings.getErrors('protocol'),
+    warning: configWarning('protocol', overrides),
+}) }}
+
+{{ forms.autosuggestField({
+    label: 'Path'|t('typesense-integration'),
+    instructions: 'Optional path prefix, if Typesense is served behind a proxy.'|t('typesense-integration'),
+    id: 'path',
+    name: 'path',
+    value: settings.path,
+    suggestEnvVars: true,
+    errors: settings.getErrors('path'),
+    warning: configWarning('path', overrides),
+}) }}
+
+{{ forms.autosuggestField({
+    label: 'Admin API Key'|t('typesense-integration'),
+    instructions: 'An API key with write access. Use an environment variable, e.g. `$TYPESENSE_API_KEY`.'|t('typesense-integration'),
+    id: 'apiKey',
+    name: 'apiKey',
+    value: settings.apiKey,
+    suggestEnvVars: true,
+    required: true,
+    errors: settings.getErrors('apiKey'),
+    warning: configWarning('apiKey', overrides),
+}) }}
+
+{{ forms.textField({
+    label: 'Timeout'|t('typesense-integration'),
+    instructions: 'Seconds to wait for Typesense before a request fails.'|t('typesense-integration'),
+    id: 'timeout',
+    name: 'timeout',
+    type: 'number',
+    step: 'any',
+    min: 0,
+    size: 6,
+    value: settings.timeout,
+    errors: settings.getErrors('timeout'),
+    warning: configWarning('timeout', overrides),
+}) }}
+
+{{ forms.textField({
+    label: 'Retries'|t('typesense-integration'),
+    instructions: 'How many times to retry a request after a network or server error.'|t('typesense-integration'),
+    id: 'numRetries',
+    name: 'numRetries',
+    type: 'number',
+    min: 0,
+    size: 6,
+    value: settings.numRetries,
+    errors: settings.getErrors('numRetries'),
+    warning: configWarning('numRetries', overrides),
+}) }}
+
+{{ forms.textField({
+    label: 'Retry interval'|t('typesense-integration'),
+    instructions: 'Seconds to wait between retries.'|t('typesense-integration'),
+    id: 'retryInterval',
+    name: 'retryInterval',
+    type: 'number',
+    step: 'any',
+    min: 0,
+    size: 6,
+    value: settings.retryInterval,
+    errors: settings.getErrors('retryInterval'),
+    warning: configWarning('retryInterval', overrides),
+}) }}
+
+<hr>
+
+<h2>{{ 'Indexing'|t('typesense-integration') }}</h2>
+
+{{ forms.autosuggestField({
+    label: 'Collection prefix'|t('typesense-integration'),
+    instructions: 'Added to every collection name, so environments can share one Typesense server (e.g. `dev_`).'|t('typesense-integration'),
+    id: 'collectionPrefix',
+    name: 'collectionPrefix',
+    value: settings.collectionPrefix,
+    suggestEnvVars: true,
+    errors: settings.getErrors('collectionPrefix'),
+    warning: configWarning('collectionPrefix', overrides),
+}) }}
+
+{{ forms.lightswitchField({
+    label: 'Sync on save'|t('typesense-integration'),
+    instructions: 'Update Typesense when elements are created, updated or deleted.'|t('typesense-integration'),
+    id: 'syncOnSave',
+    name: 'syncOnSave',
+    on: settings.syncOnSave,
+    warning: configWarning('syncOnSave', overrides),
+}) }}
+
+{{ forms.lightswitchField({
+    label: 'Use queue'|t('typesense-integration'),
+    instructions: 'Sync in a queue job instead of during the request that saved the element.'|t('typesense-integration'),
+    id: 'useQueue',
+    name: 'useQueue',
+    on: settings.useQueue,
+    warning: configWarning('useQueue', overrides),
+}) }}
+
+{{ forms.textField({
+    label: 'Batch size'|t('typesense-integration'),
+    instructions: 'Elements sent to Typesense per import request.'|t('typesense-integration'),
+    id: 'batchSize',
+    name: 'batchSize',
+    type: 'number',
+    min: 1,
+    size: 6,
+    value: settings.batchSize,
+    errors: settings.getErrors('batchSize'),
+    warning: configWarning('batchSize', overrides),
+}) }}
+
+{{ forms.selectField({
+    label: 'Log level'|t('typesense-integration'),
+    instructions: 'Messages at this level and above are written to `storage/logs/typesense-integration-*.log`.'|t('typesense-integration'),
+    id: 'logLevel',
+    name: 'logLevel',
+    value: settings.logLevel,
+    options: {
+        debug: 'Debug'|t('typesense-integration'),
+        info: 'Info'|t('typesense-integration'),
+        warning: 'Warning'|t('typesense-integration'),
+        error: 'Error'|t('typesense-integration'),
+        none: 'None'|t('typesense-integration'),
+    },
+    warning: configWarning('logLevel', overrides),
+}) }}
+
+<hr>
+
+<h2>{{ 'Collections'|t('typesense-integration') }}</h2>
+<p>{{ 'Collections, their schemas and sources are defined in `config/typesense-integration.php`. Index them from **Typesense → Collections** or with `php craft typesense-integration/index`.'|t('typesense-integration')|md(inlineOnly=true) }}</p>

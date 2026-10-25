@@ -1,0 +1,38 @@
+{# Small POST form rendered as a button. #}
+{% macro actionForm(label, action, params = {}, options = {}) %}
+    <form method="post" accept-charset="UTF-8" class="ti-inline-form"
+        {%- if options.confirm ?? false %} onsubmit="return confirm({{ options.confirm|json_encode|e('html_attr') }})"{% endif %}>
+        {{ csrfInput() }}
+        {{ actionInput(action) }}
+        {{ redirectInput(options.redirect ?? craft.app.request.url) }}
+        {% for name, value in params %}
+            {{ hiddenInput(name, value) }}
+        {% endfor %}
+        <button type="submit" class="{{ options.class ?? 'btn' }}">{{ label }}</button>
+    </form>
+{% endmacro %}
+
+{# Connection status line. #}
+{% macro connection(healthy, error, nodes = []) %}
+    <div class="ti-connection">
+        <span class="status {{ healthy ? 'green' : 'red' }}" aria-hidden="true"></span>
+        <span>
+            {{ healthy ? 'Connected to Typesense'|t('typesense-integration') : 'Typesense is not reachable'|t('typesense-integration') }}
+            {% for node in nodes %}
+                <code>{{ node.protocol }}://{{ node.host }}:{{ node.port }}{{ node.path }}</code>
+            {%- endfor %}
+        </span>
+    </div>
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+{% endmacro %}
+
+{# Yes/No marker for tables. #}
+{% macro check(value) %}
+    {% if value %}
+        <span class="ti-check" title="{{ 'Yes'|t('app') }}">✓</span>
+    {% else %}
+        <span class="light">–</span>
+    {% endif %}
+{% endmacro %}

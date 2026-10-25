@@ -1,0 +1,310 @@
+{% extends '_layouts/cp' %}
+{% import 'typesense-integration/_macros' as ti %}
+
+{% set title = collection.handle %}
+{% set selectedSubnavItem = 'collections' %}
+{% set crumbs = [
+    { label: 'Typesense'|t('typesense-integration'), url: cpUrl('typesense-integration') },
+    { label: 'Collections'|t('typesense-integration'), url: cpUrl('typesense-integration/collections') },
+] %}
+
+{% set tabs = {
+    overview: { label: 'Overview'|t('typesense-integration'), url: '#overview' },
+    schema: { label: 'Schema'|t('typesense-integration'), url: '#schema' },
+    sources: { label: 'Sources'|t('typesense-integration') ~ ' (' ~ sources|length ~ ')', url: '#sources' },
+} %}
+
+{% set jsonFlags = constant('JSON_PRETTY_PRINT') b-or constant('JSON_UNESCAPED_SLASHES') b-or constant('JSON_UNESCAPED_UNICODE') %}
+{% set totalElements = sources|reduce((carry, s) => carry + (s.elementCount ?? 0), 0) %}
+
+{% block actionButton %}
+    {% if canManage and healthy %}
+        <div class="ti-actions">
+            {% if info %}
+                {{ ti.actionForm('Drop'|t('typesense-integration'), 'typesense-integration/collections/drop', { collection: collection.handle }, {
+                    confirm: 'Delete this collection and all its documents from Typesense?'|t('typesense-integration'),
+                    redirect: 'typesense-integration/collections',
+                }) }}
+            {% endif %}
+            {{ ti.actionForm('Rebuild'|t('typesense-integration'), 'typesense-integration/collections/queue-index', { collection: collection.handle, rebuild: 1 }, {
+                confirm: 'Drop and recreate this collection, then index everything again?'|t('typesense-integration'),
+            }) }}
+            {{ ti.actionForm('Index'|t('typesense-integration'), 'typesense-integration/collections/queue-index', { collection: collection.handle }, {
+                class: 'btn submit',
+            }) }}
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% include 'typesense-integration/_styles' %}
+
+    {# Overview #}
+    <div id="overview">
+        {% if not healthy %}
+            {{ ti.connection(healthy, error) }}
+        {% elseif error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+
+        {% if differences is not empty %}
+            <div class="warning has-icon" style="margin-bottom: 20px">
+                <span class="icon" aria-hidden="true"></span>
+                <div>
+                    <p><strong>{{ 'The schema in Typesense differs from the config.'|t('typesense-integration') }}</strong>
+                    {{ 'Rebuild the collection to apply it.'|t('typesense-integration') }}</p>
+                    <ul class="bullets">
+                        {% for difference in differences %}<li>{{ difference }}</li>{% endfor %}
+                    </ul>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="ti-stats">
+            <div class="ti-stat">
+                <div class="ti-stat-value">{{ info ? info.num_documents|number : '–' }}</div>
+                <div class="ti-stat-label">{{ 'Documents in Typesense'|t('typesense-integration') }}</div>
+            </div>
+            <div class="ti-stat">
+                <div class="ti-stat-value">{{ totalElements|number }}</div>
+                <div class="ti-stat-label">{{ 'Matching elements'|t('typesense-integration') }}</div>
+            </div>
+            <div class="ti-stat">
+                <div class="ti-stat-value">{{ sources|length }}</div>
+                <div class="ti-stat-label">{{ 'Sources'|t('typesense-integration') }}</div>
+            </div>
+            <div class="ti-stat">
+                <div class="ti-stat-value">{{ fields|length }}</div>
+                <div class="ti-stat-label">{{ 'Fields'|t('typesense-integration') }}</div>
+            </div>
+        </div>
+
+        <dl class="ti-meta">
+            <dt>{{ 'Handle'|t('app') }}</dt>
+            <dd><code>{{ collection.handle }}</code></dd>
+            <dt>{{ 'Typesense name'|t('typesense-integration') }}</dt>
+            <dd><code>{{ collection.name }}</code></dd>
+            <dt>{{ 'Status'|t('app') }}</dt>
+            <dd>
+                {% if not healthy %}
+                    <span class="light">{{ 'Unknown'|t('typesense-integration') }}</span>
+                {% elseif not info %}
+                    <span class="ti-badge">{{ 'Not created'|t('typesense-integration') }}</span>
+                {% elseif differences is not empty %}
+                    <span class="ti-badge ti-warn">{{ 'Schema changed'|t('typesense-integration') }}</span>
+                {% else %}
+                    <span class="ti-badge ti-ok">{{ 'Ready'|t('typesense-integration') }}</span>
+                {% endif %}
+            </dd>
+            {% if info.created_at ?? false %}
+                <dt>{{ 'Created'|t('typesense-integration') }}</dt>
+                <dd>{{ info.created_at|datetime('short') }}</dd>
+            {% endif %}
+            {% for option, value in schemaOptions %}
+                <dt><code>{{ option }}</code></dt>
+                <dd><code>{{ value is iterable ? value|json_encode : value }}</code></dd>
+            {% endfor %}
+        </dl>
+
+        <h2 class="ti-section-title">{{ 'Sources'|t('typesense-integration') }}</h2>
+        <div class="tableview">
+            <table class="data fullwidth">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'Source'|t('typesense-integration') }}</th>
+                        <th scope="col">{{ 'Element type'|t('typesense-integration') }}</th>
+                        <th scope="col">{{ 'Transformer'|t('typesense-integration') }}</th>
+                        <th scope="col">{{ 'Elements'|t('typesense-integration') }}</th>
+                        <th scope="col">{{ 'Documents'|t('typesense-integration') }}</th>
+                        <th scope="col"><span class="visually-hidden">{{ 'Actions'|t('app') }}</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in sources %}
+                        <tr>
+                            <th scope="row"><code>{{ item.source.handle }}</code></th>
+                            <td>{{ item.source.elementTypeName }}</td>
+                            <td>
+                                {% switch item.transformer.type %}
+                                    {% case 'map' %}{{ 'Field map'|t('typesense-integration') }}
+                                    {% case 'closure' %}{{ 'Closure'|t('typesense-integration') }}
+                                    {% case 'class' %}<code class="smalltext">{{ item.transformer.class|split('\\')|last }}</code>
+                                    {% default %}<span class="error">{{ 'Invalid'|t('typesense-integration') }}</span>
+                                {% endswitch %}
+                            </td>
+                            <td>{{ item.elementCount is null ? '–' : item.elementCount|number }}</td>
+                            <td>
+                                {% if info %}
+                                    {{ item.documentCount|number }}
+                                    {% if item.documentCount < (item.elementCount ?? 0) %}
+                                        <span class="ti-badge ti-warn">{{ '{n, number} missing'|t('typesense-integration', { n: item.elementCount - item.documentCount }) }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="light">–</span>
+                                {% endif %}
+                            </td>
+                            <td class="thin">
+                                <a class="btn small" href="{{ cpUrl('typesense-integration/collections/' ~ collection.handle ~ '/' ~ item.source.handle) }}">{{ 'View elements'|t('typesense-integration') }}</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if totalElements and info and info.num_documents < totalElements %}
+            <p class="light">
+                {{ '{missing, number} matching elements are not in Typesense yet. Run **Index** to add them.'|t('typesense-integration', {
+                    missing: totalElements - info.num_documents,
+                })|md(inlineOnly=true) }}
+            </p>
+        {% endif %}
+    </div>
+
+    {# Schema #}
+    <div id="schema" class="hidden">
+        <div class="tableview">
+            <table class="data fullwidth">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'Field'|t('app') }}</th>
+                        <th scope="col">{{ 'Type'|t('app') }}</th>
+                        <th scope="col" class="centeralign">{{ 'Facet'|t('typesense-integration') }}</th>
+                        <th scope="col" class="centeralign" title="{{ 'Indexed fields can be searched and used in filter_by.'|t('typesense-integration') }}">{{ 'Indexed / filterable'|t('typesense-integration') }}</th>
+                        <th scope="col" class="centeralign">{{ 'Sortable'|t('typesense-integration') }}</th>
+                        <th scope="col" class="centeralign">{{ 'Optional'|t('typesense-integration') }}</th>
+                        <th scope="col">{{ 'Notes'|t('typesense-integration') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for field in fields %}
+                        {% set numeric = field.type in ['int32', 'int64', 'float', 'bool', 'int32[]', 'int64[]', 'float[]', 'bool[]'] %}
+                        {% set extra = field|filter((v, k) => k not in ['name', 'type', 'facet', 'index', 'sort', 'optional']) %}
+                        <tr>
+                            <th scope="row"><code>{{ field.name }}</code></th>
+                            <td><code>{{ field.type }}</code></td>
+                            <td class="centeralign">{{ ti.check(field.facet ?? false) }}</td>
+                            <td class="centeralign">{{ ti.check(field.index ?? true) }}</td>
+                            <td class="centeralign">{{ ti.check(field.sort ?? numeric) }}</td>
+                            <td class="centeralign">{{ ti.check(field.optional ?? false) }}</td>
+                            <td>
+                                {% if field.name in baseFields %}
+                                    <span class="ti-badge">{{ 'Added automatically'|t('typesense-integration') }}</span>
+                                {% endif %}
+                                {% if field.name == (schemaOptions.default_sorting_field ?? null) %}
+                                    <span class="ti-badge">{{ 'Default sort'|t('typesense-integration') }}</span>
+                                {% endif %}
+                                {% for k, v in extra %}
+                                    <code class="smalltext">{{ k }}: {{ v is iterable ? v|json_encode : (v is same as(true) ? 'true' : (v is same as(false) ? 'false' : v)) }}</code>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# Sources #}
+    <div id="sources" class="hidden">
+        {% for item in sources %}
+            {% set source = item.source %}
+            {% set transformer = item.transformer %}
+            <section class="ti-source">
+                <header class="ti-source-header">
+                    <div>
+                        <h3>{{ source.handle }}</h3>
+                        <div class="light smalltext">
+                            {{ source.elementTypeName }} · <code>{{ source.elementType }}</code>
+                        </div>
+                    </div>
+                    <div class="ti-actions">
+                        <span class="ti-badge">{{ '{count, number} {count, plural, =1{element} other{elements}}'|t('typesense-integration', { count: item.elementCount ?? 0 }) }}</span>
+                        <span class="ti-badge {{ info and item.documentCount < (item.elementCount ?? 0) ? 'ti-warn' : '' }}">
+                            {{ '{count, number} {count, plural, =1{document} other{documents}}'|t('typesense-integration', { count: item.documentCount }) }}
+                        </span>
+                        <a class="btn small" href="{{ cpUrl('typesense-integration/collections/' ~ collection.handle ~ '/' ~ source.handle) }}">{{ 'View elements'|t('typesense-integration') }}</a>
+                    </div>
+                </header>
+                <div class="ti-source-body">
+                    <div>
+                        <h4>{{ 'Criteria'|t('typesense-integration') }}</h4>
+                        {% if item.criteria is null %}
+                            <p class="light">{{ 'Built by a closure in the config.'|t('typesense-integration') }}</p>
+                        {% elseif item.criteria is empty %}
+                            <p class="light">{{ 'All elements of this type (default query).'|t('typesense-integration') }}</p>
+                        {% else %}
+                            <pre class="ti-code">{{ item.criteria|json_encode(jsonFlags) }}</pre>
+                        {% endif %}
+
+                        <h4 style="margin-top: 16px">{{ 'Transformer'|t('typesense-integration') }}</h4>
+                        {% switch transformer.type %}
+                            {% case 'map' %}
+                                <p>{{ 'Field map'|t('typesense-integration') }}</p>
+                            {% case 'closure' %}
+                                <p>{{ 'Closure — returns the whole document.'|t('typesense-integration') }}</p>
+                            {% case 'class' %}
+                                <p><code>{{ transformer.class }}</code></p>
+                            {% default %}
+                                <p class="error">{{ transformer.error ?? 'Invalid transformer'|t('typesense-integration') }}</p>
+                        {% endswitch %}
+                    </div>
+                    <div>
+                        {% if transformer.type == 'map' %}
+                            <h4>{{ 'Field mapping'|t('typesense-integration') }}</h4>
+                            <table class="data fullwidth">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">{{ 'Typesense field'|t('typesense-integration') }}</th>
+                                        <th scope="col">{{ 'Value from'|t('typesense-integration') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for field in fields|filter(f => f.name not in baseFields) %}
+                                        <tr>
+                                            <td><code>{{ field.name }}</code> <span class="light smalltext">{{ field.type }}</span></td>
+                                            <td>
+                                                {% if field.name not in transformer.map|keys %}
+                                                    {% if field.optional ?? false %}
+                                                        <span class="light">{{ 'Not mapped'|t('typesense-integration') }}</span>
+                                                    {% else %}
+                                                        <span class="ti-badge ti-warn">{{ 'Not mapped, but required'|t('typesense-integration') }}</span>
+                                                    {% endif %}
+                                                {% elseif transformer.map[field.name] is null %}
+                                                    <span class="ti-badge">{{ 'Closure'|t('typesense-integration') }}</span>
+                                                {% else %}
+                                                    <code>{{ transformer.map[field.name] }}</code>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    {% for name, path in transformer.map %}
+                                        {% if name not in fields|column('name') %}
+                                            <tr>
+                                                <td><code>{{ name }}</code> <span class="light smalltext">{{ 'stored only, not in schema'|t('typesense-integration') }}</span></td>
+                                                <td>{% if path is null %}<span class="ti-badge">{{ 'Closure'|t('typesense-integration') }}</span>{% else %}<code>{{ path }}</code>{% endif %}</td>
+                                            </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            <p class="light smalltext">{{ '`elementId`, `siteId` and `source` are added to every document automatically.'|t('typesense-integration')|md(inlineOnly=true) }}</p>
+                        {% endif %}
+
+                        <h4 {% if transformer.type == 'map' %}style="margin-top: 16px"{% endif %}>{{ 'Sample document'|t('typesense-integration') }}</h4>
+                        {% if item.sample.error %}
+                            <p class="error">{{ item.sample.error }}</p>
+                        {% elseif not item.sample.element %}
+                            <p class="light">{{ 'No elements match this source yet.'|t('typesense-integration') }}</p>
+                        {% elseif item.sample.document is null %}
+                            <p class="light">{{ 'The transformer skipped {element} (returned null).'|t('typesense-integration', { element: item.sample.element.title ?? item.sample.element.id }) }}</p>
+                        {% else %}
+                            <p class="light smalltext">{{ 'Generated from “{element}” (ID {id}).'|t('typesense-integration', { element: item.sample.element.title ?? item.sample.element.id, id: item.sample.element.id }) }}</p>
+                            <pre class="ti-code ti-sample">{{ item.sample.document|json_encode(jsonFlags) }}</pre>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+        {% endfor %}
+    </div>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends '_layouts/cp' %}
+{% import 'typesense-integration/_macros' as ti %}
+
+{% set title = source.handle %}
+{% set selectedSubnavItem = 'collections' %}
+{% set crumbs = [
+    { label: 'Typesense'|t('typesense-integration'), url: cpUrl('typesense-integration') },
+    { label: 'Collections'|t('typesense-integration'), url: cpUrl('typesense-integration/collections') },
+    { label: collection.handle, url: cpUrl('typesense-integration/collections/' ~ collection.handle) ~ '#sources' },
+] %}
+
+{% set baseUrl = 'typesense-integration/collections/' ~ collection.handle ~ '/' ~ source.handle %}
+{% set queryParams = search ? { search: search } : {} %}
+
+{% block content %}
+    {% include 'typesense-integration/_styles' %}
+
+    {% if not healthy %}
+        {{ ti.connection(healthy, error) }}
+    {% elseif error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+
+    <div class="ti-toolbar">
+        <div class="light">
+            {{ source.elementTypeName }} ·
+            {{ '{count, number} {count, plural, =1{element} other{elements}} match this source'|t('typesense-integration', { count: total }) }}
+        </div>
+        <form method="get" action="{{ cpUrl(baseUrl) }}" class="flex">
+            <div class="texticon search icon clearable">
+                <input type="search" class="text fullwidth" name="search" value="{{ search }}"
+                    placeholder="{{ 'Search'|t('app') }}" aria-label="{{ 'Search'|t('app') }}">
+            </div>
+            <button type="submit" class="btn">{{ 'Search'|t('app') }}</button>
+        </form>
+    </div>
+
+    {% if elements is empty %}
+        <div class="zilch">{{ search ? 'No elements match your search.'|t('typesense-integration') : 'No elements match this source.'|t('typesense-integration') }}</div>
+    {% else %}
+        <div class="tableview">
+            <table class="data fullwidth">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'Element'|t('typesense-integration') }}</th>
+                        <th scope="col">{{ 'ID'|t('app') }}</th>
+                        {% if multiSite %}<th scope="col">{{ 'Site'|t('app') }}</th>{% endif %}
+                        <th scope="col">{{ 'Updated'|t('app') }}</th>
+                        <th scope="col">{{ 'In Typesense'|t('typesense-integration') }}</th>
+                        {% if canManage and healthy %}<th scope="col"><span class="visually-hidden">{{ 'Actions'|t('app') }}</span></th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for element in elements %}
+                        {% set key = element.id ~ '-' ~ element.siteId %}
+                        <tr>
+                            <th scope="row">{{ elementChip(element) }}</th>
+                            <td class="light">{{ element.id }}</td>
+                            {% if multiSite %}<td>{{ element.site.name }}</td>{% endif %}
+                            <td>{{ element.dateUpdated|timestamp('short') }}</td>
+                            <td>
+                                {% if indexed is null %}
+                                    <span class="light">–</span>
+                                {% elseif indexed[key] is defined %}
+                                    <span class="ti-badge ti-ok">{{ 'Indexed'|t('typesense-integration') }}</span>
+                                {% else %}
+                                    <span class="ti-badge ti-warn">{{ 'Missing'|t('typesense-integration') }}</span>
+                                {% endif %}
+                            </td>
+                            {% if canManage and healthy %}
+                                <td class="thin">
+                                    {{ ti.actionForm('Sync'|t('typesense-integration'), 'typesense-integration/collections/sync-element', { elementId: element.id }, { class: 'btn small' }) }}
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="ti-pagination">
+            <div class="light">
+                {{ '{first, number}–{last, number} of {total, number}'|t('typesense-integration', {
+                    first: offset + 1,
+                    last: offset + elements|length,
+                    total: total,
+                }) }}
+            </div>
+            {% if totalPages > 1 %}
+                <div class="flex">
+                    {% if page > 1 %}
+                        <a class="btn" href="{{ cpUrl(baseUrl, queryParams|merge({ page: page - 1 })) }}">← {{ 'Previous'|t('app') }}</a>
+                    {% endif %}
+                    <span class="light">{{ 'Page {page} of {total}'|t('typesense-integration', { page: page, total: totalPages }) }}</span>
+                    {% if page < totalPages %}
+                        <a class="btn" href="{{ cpUrl(baseUrl, queryParams|merge({ page: page + 1 })) }}">{{ 'Next'|t('app') }} →</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endblock %}

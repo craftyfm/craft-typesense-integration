@@ -1,0 +1,18 @@
+{% extends '_layouts/cp' %}
+
+{% set title = 'Settings'|t('app') %}
+{% set selectedSubnavItem = 'settings' %}
+{% set fullPageForm = true %}
+{% set crumbs = [
+    { label: 'Typesense'|t('typesense-integration'), url: cpUrl('typesense-integration') },
+] %}
+
+{% block content %}
+    {{ actionInput('plugins/save-plugin-settings') }}
+    {{ hiddenInput('pluginHandle', plugin.handle) }}
+    {{ redirectInput('typesense-integration/settings') }}
+
+    {% namespace 'settings' %}
+        {% include 'typesense-integration/settings/_fields' %}
+    {% endnamespace %}
+{% endblock %}

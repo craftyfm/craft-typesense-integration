@@ -1,0 +1,46 @@
+{
+  "name": "x2network/craft-typesense-integration",
+  "description": "Index Craft CMS elements into Typesense, with multi-source collections, transformers and automatic syncing.",
+  "type": "craft-plugin",
+  "keywords": [
+    "craft",
+    "cms",
+    "craftcms",
+    "craft-plugin",
+    "typesense",
+    "search"
+  ],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "X2 Network"
+    }
+  ],
+  "require": {
+    "php": "^8.2",
+    "craftcms/cms": "^5.0.0",
+    "typesense/typesense-php": "^6.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "x2network\\typesenseintegration\\": "src/"
+    }
+  },
+  "extra": {
+    "handle": "typesense-integration",
+    "name": "Typesense Integration",
+    "developer": "X2 Network",
+    "class": "x2network\\typesenseintegration\\TypesenseIntegration"
+  },
+  "config": {
+    "sort-packages": true,
+    "platform": {
+      "php": "8.2"
+    },
+    "allow-plugins": {
+      "yiisoft/yii2-composer": true,
+      "craftcms/plugin-installer": true,
+      "php-http/discovery": true
+    }
+  }
+}

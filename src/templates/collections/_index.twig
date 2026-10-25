@@ -1,0 +1,105 @@
+{% extends '_layouts/cp' %}
+{% import 'typesense-integration/_macros' as ti %}
+
+{% set title = 'Collections'|t('typesense-integration') %}
+{% set selectedSubnavItem = 'collections' %}
+
+{% block actionButton %}
+    {% if canManage and healthy and rows is not empty %}
+        <div class="ti-actions">
+            {{ ti.actionForm('Rebuild all'|t('typesense-integration'), 'typesense-integration/collections/queue-index', { rebuild: 1 }, {
+                confirm: 'Drop and recreate every collection, then index everything again?'|t('typesense-integration'),
+            }) }}
+            {{ ti.actionForm('Index all'|t('typesense-integration'), 'typesense-integration/collections/queue-index', {}, {
+                class: 'btn submit',
+            }) }}
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% include 'typesense-integration/_styles' %}
+    {% if not configured %}
+        <p class="warning has-icon">
+            <span class="icon" aria-hidden="true"></span>
+            {{ 'Typesense is not configured yet.'|t('typesense-integration') }}
+            {% if currentUser.admin %}<a href="{{ settingsUrl }}">{{ 'Go to settings'|t('typesense-integration') }}</a>{% endif %}
+        </p>
+    {% else %}
+        {{ ti.connection(healthy, error, nodes) }}
+        <p class="light">
+            {{ 'Sync on save:'|t('typesense-integration') }} <strong>{{ syncOnSave ? 'On'|t('app') : 'Off'|t('app') }}</strong>
+            · {{ 'Use queue:'|t('typesense-integration') }} <strong>{{ useQueue ? 'On'|t('app') : 'Off'|t('app') }}</strong>
+        </p>
+    {% endif %}
+
+    <hr>
+
+    {% if configError %}
+        <p class="error">{{ 'The collection config is invalid:'|t('typesense-integration') }} {{ configError }}</p>
+    {% elseif rows is empty %}
+        <div class="zilch">
+            {{ 'No collections yet. Define them in `config/typesense-integration.php`.'|t('typesense-integration')|md(inlineOnly=true) }}
+        </div>
+    {% else %}
+        <div class="tableview">
+            <table class="data fullwidth">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'Collection'|t('typesense-integration') }}</th>
+                        <th scope="col">{{ 'Sources'|t('typesense-integration') }}</th>
+                        <th scope="col">{{ 'Documents'|t('typesense-integration') }}</th>
+                        <th scope="col">{{ 'Status'|t('app') }}</th>
+                        {% if canManage and healthy %}<th scope="col"><span class="visually-hidden">{{ 'Actions'|t('app') }}</span></th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                        {% set collection = row.collection %}
+                        <tr>
+                            <th scope="row">
+                                <a href="{{ cpUrl('typesense-integration/collections/' ~ collection.handle) }}"><strong>{{ collection.handle }}</strong></a>
+                                <div class="light smalltext"><code>{{ collection.name }}</code></div>
+                            </th>
+                            <td>
+                                <div class="ti-sources-list">
+                                    {% for source in collection.sources %}
+                                        <span class="ti-badge" title="{{ source.elementType }}">{{ source.handle }} · {{ source.elementTypeName }}</span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if row.info %}{{ row.info.num_documents|number }}{% else %}<span class="light">–</span>{% endif %}
+                            </td>
+                            <td>
+                                {% if not healthy %}
+                                    <span class="light">{{ 'Unknown'|t('typesense-integration') }}</span>
+                                {% elseif not row.info %}
+                                    <span class="ti-badge">{{ 'Not created'|t('typesense-integration') }}</span>
+                                {% elseif row.outdated %}
+                                    <span class="ti-badge ti-warn" title="{{ 'Rebuild to apply the schema from the config.'|t('typesense-integration') }}">{{ 'Schema changed'|t('typesense-integration') }}</span>
+                                {% else %}
+                                    <span class="ti-badge ti-ok">{{ 'Ready'|t('typesense-integration') }}</span>
+                                {% endif %}
+                            </td>
+                            {% if canManage and healthy %}
+                                <td class="thin nowrap">
+                                    <div class="ti-actions">
+                                        {{ ti.actionForm('Index'|t('typesense-integration'), 'typesense-integration/collections/queue-index', { collection: collection.handle }, { class: 'btn small' }) }}
+                                        {{ ti.actionForm('Rebuild'|t('typesense-integration'), 'typesense-integration/collections/queue-index', { collection: collection.handle, rebuild: 1 }, {
+                                            class: 'btn small',
+                                            confirm: 'Drop and recreate this collection, then index everything again?'|t('typesense-integration'),
+                                        }) }}
+                                    </div>
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="light smalltext">
+            {{ '**Index** upserts every element. **Rebuild** recreates the collection first, which applies schema changes and removes stale documents. Both run in the queue.'|t('typesense-integration')|md(inlineOnly=true) }}
+        </p>
+    {% endif %}
+{% endblock %}
